@@ -346,11 +346,39 @@
 </style>
 </head>
 <body>
-<div class="wrap" id="app">
+<div class="wrap" id="authScreen" style="max-width:420px; padding-top:70px;">
+  <div class="masthead">
+    <div class="eyebrow">Shared Trip Ledger</div>
+    <h1 class="trip-title" style="cursor:default; border:none;">Enter a trip</h1>
+    <div class="trip-sub">Create a new trip, or join one your friends already started.</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-authtab="join" id="authTabJoin">Join a trip</button>
+    <button class="tab" data-authtab="create" id="authTabCreate">Create a trip</button>
+  </div>
+
+  <div class="balance-card">
+    <div class="field">
+      <label>Trip name</label>
+      <input type="text" id="auth_tripname" placeholder="e.g. Haridwar">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="auth_password" placeholder="e.g. 1234">
+    </div>
+    <div id="authError" style="color:var(--rust); font-size:13px; margin-bottom:10px; display:none;"></div>
+    <button class="add-expense-btn" id="authSubmit" style="margin-bottom:0;">Join trip</button>
+  </div>
+</div>
+
+<div class="wrap" id="app" style="display:none;">
   <div class="masthead">
     <div class="eyebrow">Shared Trip Ledger</div>
     <h1 class="trip-title" id="tripTitle" contenteditable="true" spellcheck="false">Loading…</h1>
-    <div class="trip-sub">Everyone with this link sees the same list — add, edit, or settle up together.</div>
+    <div class="trip-sub">Everyone with this link and password sees the same list — add, edit, or settle up together.
+      <a href="#" id="switchTripLink" style="color:var(--teal); margin-left:6px;">Switch trip</a>
+    </div>
   </div>
 
   <div class="friends-bar" id="friendsBar"></div>
@@ -390,26 +418,53 @@ let state = null; // {tripName, friends:[{id,name}], expenses:[{id,description,a
 let activeTab = 'expenses';
 let editingExpenseId = null;
 let pollTimer = null;
+let auth = null; // {tripKey, password}
+
+const AUTH_STORAGE_KEY = 'trip-ledger-auth';
+
+function loadSavedAuth(){
+  try{
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function persistAuth(a){
+  auth = a;
+  try{ localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(a)); }catch(e){}
+}
+function clearAuth(){
+  auth = null;
+  try{ localStorage.removeItem(AUTH_STORAGE_KEY); }catch(e){}
+}
 
 function defaultState(){
   return { tripName: 'Our Trip', friends: [], expenses: [] };
 }
 
 async function loadState(){
+  if(!auth) return null;
   try{
-    const res = await fetch('/api/state', { cache: 'no-store' });
+    const res = await fetch(`/api/trip/${encodeURIComponent(auth.tripKey)}`, {
+      cache: 'no-store',
+      headers: { 'x-trip-password': auth.password }
+    });
     if(res.ok){
       return await res.json();
+    }
+    if(res.status === 401){
+      clearAuth();
+      showAuthScreen('Session expired — please log in again.');
     }
   }catch(e){ console.error(e); }
   return null;
 }
 
 async function saveState(){
+  if(!auth) return;
   try{
-    const res = await fetch('/api/state', {
+    const res = await fetch(`/api/trip/${encodeURIComponent(auth.tripKey)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-trip-password': auth.password },
       cache: 'no-store',
       body: JSON.stringify(state)
     });
@@ -428,18 +483,49 @@ function showToast(msg){
   showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
-async function init(){
+function showAuthScreen(errorMsg){
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'block';
+  const errEl = document.getElementById('authError');
+  if(errorMsg){
+    errEl.textContent = errorMsg;
+    errEl.style.display = 'block';
+  } else {
+    errEl.style.display = 'none';
+  }
+  if(pollTimer) clearInterval(pollTimer);
+}
+
+async function enterApp(){
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
   let loaded = await loadState();
   if(!loaded){
-    loaded = defaultState();
+    // brief retry in case of a transient network blip — never overwrite real data on failure
+    await new Promise(r => setTimeout(r, 1500));
+    loaded = await loadState();
+  }
+  if(loaded){
     state = loaded;
-    await saveState();
+    document.getElementById('statusLine').textContent = 'synced';
   } else {
-    state = loaded;
+    state = defaultState();
+    document.getElementById('statusLine').textContent = 'offline — try refreshing';
+    showToast("Couldn't load this trip's data. Try refreshing the page.");
   }
   render();
-  document.getElementById('statusLine').textContent = 'synced';
   startPolling();
+}
+
+async function init(){
+  const saved = loadSavedAuth();
+  if(saved && saved.tripKey && saved.password){
+    auth = saved;
+    await enterApp();
+  } else {
+    showAuthScreen();
+  }
 }
 
 function startPolling(){
@@ -741,6 +827,66 @@ titleEl.addEventListener('blur', async ()=>{
 });
 titleEl.addEventListener('keydown', e=>{
   if(e.key==='Enter'){ e.preventDefault(); titleEl.blur(); }
+});
+
+/* ---------- Auth screen ---------- */
+let authMode = 'join'; // 'join' | 'create'
+
+function setAuthMode(mode){
+  authMode = mode;
+  document.getElementById('authTabJoin').classList.toggle('active', mode==='join');
+  document.getElementById('authTabCreate').classList.toggle('active', mode==='create');
+  document.getElementById('authSubmit').textContent = mode==='join' ? 'Join trip' : 'Create trip';
+  document.getElementById('authError').style.display = 'none';
+}
+document.getElementById('authTabJoin').addEventListener('click', ()=>setAuthMode('join'));
+document.getElementById('authTabCreate').addEventListener('click', ()=>setAuthMode('create'));
+
+async function submitAuth(){
+  const tripName = document.getElementById('auth_tripname').value.trim();
+  const password = document.getElementById('auth_password').value;
+  const errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+
+  if(!tripName || !password){
+    errEl.textContent = 'Enter both a trip name and a password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const endpoint = authMode === 'join' ? '/api/trip/login' : '/api/trip/create';
+  try{
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({ tripName, password })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      errEl.textContent = data.error || 'Something went wrong.';
+      errEl.style.display = 'block';
+      return;
+    }
+    persistAuth({ tripKey: data.tripKey, password });
+    await enterApp();
+  }catch(e){
+    errEl.textContent = "Couldn't reach the server — check your connection.";
+    errEl.style.display = 'block';
+  }
+}
+document.getElementById('authSubmit').addEventListener('click', submitAuth);
+document.getElementById('auth_password').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); submitAuth(); }
+});
+
+document.getElementById('switchTripLink').addEventListener('click', (e)=>{
+  e.preventDefault();
+  clearAuth();
+  state = null;
+  document.getElementById('auth_tripname').value = '';
+  document.getElementById('auth_password').value = '';
+  showAuthScreen();
 });
 
 init();
