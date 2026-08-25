@@ -397,7 +397,7 @@ function defaultState(){
 
 async function loadState(){
   try{
-    const res = await fetch('/api/state');
+    const res = await fetch('/api/state', { cache: 'no-store' });
     if(res.ok){
       return await res.json();
     }
@@ -410,6 +410,7 @@ async function saveState(){
     const res = await fetch('/api/state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
       body: JSON.stringify(state)
     });
     if(!res.ok) throw new Error('save failed');
