@@ -26,13 +26,16 @@ function writeState(state) {
 }
 
 app.use(express.json());
+app.set('etag', false);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/state', (req, res) => {
+  res.set('Cache-Control', 'no-store')
   res.json(readState());
 });
 
 app.put('/api/state', (req, res) => {
+  res.set('Cache-Control', 'no-store')
   const body = req.body;
   if (!body || typeof body !== 'object') {
     return res.status(400).json({ error: 'Invalid state payload' });
