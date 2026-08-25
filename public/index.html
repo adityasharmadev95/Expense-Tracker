@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trip Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F5EF;
+    --paper-raised:#FFFFFF;
+    --ink:#1C2B3A;
+    --ink-soft:#5B6B78;
+    --brass:#B8892B;
+    --brass-soft:#EFE0BE;
+    --teal:#3F6E63;
+    --teal-soft:#DCE9E4;
+    --rust:#9B4A3F;
+    --rust-soft:#F2DCD8;
+    --line:#D7D9CC;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(28,43,58,0.06), 0 6px 20px rgba(28,43,58,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top left, rgba(63,110,99,0.05), transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(184,137,43,0.06), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    padding:32px 18px 80px;
+  }
+  .wrap{max-width:780px;margin:0 auto;}
+
+  /* Header */
+  .masthead{
+    text-align:center;
+    margin-bottom:28px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--teal);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .eyebrow::before,.eyebrow::after{
+    content:"";
+    height:1px;
+    width:28px;
+    background:var(--line);
+  }
+  .trip-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(28px,6vw,42px);
+    line-height:1.1;
+    margin:0;
+    outline:none;
+    border-bottom:2px dashed transparent;
+    cursor:text;
+    padding:2px 4px;
+  }
+  .trip-title:hover, .trip-title:focus{border-bottom-color:var(--brass);}
+  .trip-sub{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-top:8px;
+  }
+
+  /* Friends bar */
+  .friends-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    margin:20px 0 8px;
+  }
+  .chip{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:6px 6px 6px 14px;
+    font-size:13px;
+    font-weight:500;
+    box-shadow:var(--shadow);
+  }
+  .chip .avatar{
+    width:20px;height:20px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; font-weight:600; color:#fff;
+  }
+  .chip button{
+    background:none;border:none;cursor:pointer;
+    color:var(--ink-soft); font-size:14px; line-height:1;
+    padding:4px 6px; border-radius:50%;
+  }
+  .chip button:hover{background:var(--rust-soft); color:var(--rust);}
+  .add-friend{
+    display:flex; align-items:center; gap:6px;
+    background:transparent;
+    border:1.5px dashed var(--line);
+    border-radius:999px;
+    padding:6px 14px;
+  }
+  .add-friend input{
+    border:none; background:none; outline:none;
+    font-family:'Inter',sans-serif; font-size:13px; width:110px;
+    color:var(--ink);
+  }
+  .add-friend button{
+    background:var(--teal); color:#fff; border:none;
+    width:22px;height:22px;border-radius:50%;
+    cursor:pointer; font-size:14px; line-height:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex; justify-content:center; gap:4px;
+    margin:26px 0 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .tab{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:0.06em; text-transform:uppercase;
+    background:none; border:none; cursor:pointer;
+    padding:10px 18px; color:var(--ink-soft);
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+  .tab.active{color:var(--ink); border-bottom-color:var(--brass); font-weight:600;}
+
+  /* Add expense button */
+  .add-expense-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:var(--radius);
+    padding:14px;
+    font-family:'Fraunces', serif;
+    font-size:16px; font-weight:600;
+    cursor:pointer;
+    margin-bottom:22px;
+    box-shadow:var(--shadow);
+    transition:transform .12s ease;
+  }
+  .add-expense-btn:hover{transform:translateY(-1px);}
+  .add-expense-btn:active{transform:translateY(0px);}
+
+  /* Ticket-style expense card */
+  .ticket{
+    position:relative;
+    background:var(--paper-raised);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    display:flex;
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .ticket-main{
+    flex:1;
+    padding:16px 18px;
+  }
+  .ticket-row1{
+    display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+  }
+  .ticket-desc{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:17px;
+  }
+  .ticket-amount{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:17px;
+    white-space:nowrap;
+  }
+  .ticket-meta{
+    margin-top:6px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex; flex-wrap:wrap; gap:6px 14px;
+  }
+  .ticket-meta b{color:var(--ink); font-weight:600;}
+  .split-avatars{
+    display:flex; gap:4px; margin-top:10px; flex-wrap:wrap;
+  }
+  .mini-avatar{
+    width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; color:#fff;
+    border:2px solid var(--paper-raised);
+  }
+  .ticket-stub{
+    width:64px;
+    flex-shrink:0;
+    border-left:2px dashed var(--line);
+    background:repeating-linear-gradient(180deg, var(--paper-raised), var(--paper-raised) 8px, transparent 8px, transparent 9px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    position:relative;
+  }
+  .ticket-stub::before, .ticket-stub::after{
+    content:"";
+    position:absolute; left:-8px;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--paper);
+  }
+  .ticket-stub::before{top:-8px;}
+  .ticket-stub::after{bottom:-8px;}
+  .stub-btn{
+    background:none; border:none; cursor:pointer;
+    color:var(--ink-soft); font-size:15px;
+    width:32px;height:32px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .stub-btn:hover{background:var(--teal-soft); color:var(--teal);}
+  .stub-btn.danger:hover{background:var(--rust-soft); color:var(--rust);}
+
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:var(--ink-soft);
+    font-size:14px;
+    background:var(--paper-raised);
+    border-radius:var(--radius);
+    border:1.5px dashed var(--line);
+  }
+  .empty .big{font-family:'Fraunces',serif; font-size:19px; color:var(--ink); margin-bottom:6px; font-weight:600;}
+
+  /* Balances */
+  .balance-card{
+    background:var(--paper-raised);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 20px;
+    margin-bottom:14px;
+  }
+  .balance-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .balance-row:last-child{border-bottom:none;}
+  .balance-who{display:flex; align-items:center; gap:10px; font-weight:600;}
+  .balance-amt{font-family:'IBM Plex Mono', monospace; font-weight:600;}
+  .positive{color:var(--teal);}
+  .negative{color:var(--rust);}
+  .settle-title{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--ink-soft); margin:22px 0 10px 4px;
+  }
+  .settle-row{
+    display:flex; align-items:center; gap:10px;
+    background:var(--paper-raised);
+    border-radius:10px;
+    padding:12px 16px;
+    margin-bottom:8px;
+    box-shadow:var(--shadow);
+    font-size:14px;
+  }
+  .settle-arrow{color:var(--brass); font-weight:700;}
+  .settle-amt{
+    margin-left:auto;
+    font-family:'IBM Plex Mono', monospace; font-weight:600;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(28,43,58,0.45);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:50; backdrop-filter: blur(2px);
+  }
+  @media(min-width:640px){ .overlay{align-items:center;} }
+  .modal{
+    background:var(--paper);
+    width:100%; max-width:460px;
+    border-radius:20px 20px 0 0;
+    padding:24px 22px 28px;
+    box-shadow:0 -10px 40px rgba(0,0,0,0.2);
+    max-height:88vh; overflow-y:auto;
+  }
+  @media(min-width:640px){ .modal{border-radius:18px; margin-bottom:20px;} }
+  .modal h3{
+    font-family:'Fraunces', serif; font-size:22px; margin:0 0 18px;
+  }
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block; font-size:12px; font-weight:600; letter-spacing:0.03em;
+    text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%; padding:11px 12px; border-radius:10px;
+    border:1.5px solid var(--line); background:var(--paper-raised);
+    font-family:'Inter',sans-serif; font-size:15px; color:var(--ink);
+    outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--teal);}
+  .split-grid{
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .split-pill{
+    display:flex; align-items:center; gap:6px;
+    border:1.5px solid var(--line); border-radius:999px;
+    padding:7px 12px 7px 8px; cursor:pointer; font-size:13px; font-weight:500;
+    user-select:none;
+  }
+  .split-pill.on{border-color:var(--teal); background:var(--teal-soft); color:var(--teal);}
+  .split-pill .avatar{width:18px;height:18px;font-size:9px;}
+  .modal-actions{display:flex; gap:10px; margin-top:22px;}
+  .btn{
+    flex:1; padding:13px; border-radius:10px; border:none; cursor:pointer;
+    font-family:'Fraunces',serif; font-weight:600; font-size:15px;
+  }
+  .btn-primary{background:var(--ink); color:var(--paper);}
+  .btn-secondary{background:transparent; color:var(--ink-soft); border:1.5px solid var(--line);}
+  .btn-danger-text{background:none; border:none; color:var(--rust); font-size:13px; cursor:pointer; margin-top:4px; font-family:'Inter',sans-serif;}
+
+  .status-line{
+    text-align:center; font-size:11px; color:var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace; margin-top:26px;
+  }
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:var(--paper); padding:10px 18px;
+    border-radius:999px; font-size:13px; z-index:100;
+    opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="masthead">
+    <div class="eyebrow">Shared Trip Ledger</div>
+    <h1 class="trip-title" id="tripTitle" contenteditable="true" spellcheck="false">Loading…</h1>
+    <div class="trip-sub">Everyone with this link sees the same list — add, edit, or settle up together.</div>
+  </div>
+
+  <div class="friends-bar" id="friendsBar"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="expenses" id="tabExpenses">Expenses</button>
+    <button class="tab" data-tab="balances" id="tabBalances">Balances</button>
+  </div>
+
+  <div id="expensesView">
+    <button class="add-expense-btn" id="openAddExpense">+ Add an expense</button>
+    <div id="expenseList"></div>
+  </div>
+
+  <div id="balancesView" style="display:none;"></div>
+
+  <div class="status-line" id="statusLine">syncing…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const AVATAR_COLORS = ['#3F6E63','#B8892B','#9B4A3F','#5B6B78','#7A5C8E','#2E6E8E','#8C6A2E','#4E7D3A'];
+function colorFor(id){
+  let h=0; for(let i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))>>>0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function initials(name){
+  return name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+}
+function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
+function fmt(n){
+  return (Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+let state = null; // {tripName, friends:[{id,name}], expenses:[{id,description,amount,paidBy,splitAmong,date}]}
+let activeTab = 'expenses';
+let editingExpenseId = null;
+let pollTimer = null;
+
+function defaultState(){
+  return { tripName: 'Our Trip', friends: [], expenses: [] };
+}
+
+async function loadState(){
+  try{
+    const res = await fetch('/api/state');
+    if(res.ok){
+      return await res.json();
+    }
+  }catch(e){ console.error(e); }
+  return null;
+}
+
+async function saveState(){
+  try{
+    const res = await fetch('/api/state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+    if(!res.ok) throw new Error('save failed');
+  }catch(e){
+    showToast("Couldn't save — check your connection");
+    console.error(e);
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+async function init(){
+  let loaded = await loadState();
+  if(!loaded){
+    loaded = defaultState();
+    state = loaded;
+    await saveState();
+  } else {
+    state = loaded;
+  }
+  render();
+  document.getElementById('statusLine').textContent = 'synced';
+  startPolling();
+}
+
+function startPolling(){
+  pollTimer = setInterval(async ()=>{
+    if(document.querySelector('.overlay')) return; // don't clobber while editing in modal
+    const fresh = await loadState();
+    if(fresh && JSON.stringify(fresh) !== JSON.stringify(state)){
+      state = fresh;
+      render();
+      document.getElementById('statusLine').textContent = 'updated just now';
+    }
+  }, 4000);
+}
+
+/* ---------- Rendering ---------- */
+function render(){
+  renderTitle();
+  renderFriends();
+  renderExpenses();
+  renderBalances();
+}
+
+function renderTitle(){
+  const el = document.getElementById('tripTitle');
+  if(document.activeElement !== el) el.textContent = state.tripName || 'Our Trip';
+}
+
+function renderFriends(){
+  const bar = document.getElementById('friendsBar');
+  bar.innerHTML = '';
+  state.friends.forEach(f=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span class="avatar" style="background:${colorFor(f.id)}">${initials(f.name)}</span>
+      <span>${escapeHtml(f.name)}</span>
+      <button title="Remove ${escapeHtml(f.name)}" data-id="${f.id}">×</button>`;
+    chip.querySelector('button').addEventListener('click', ()=>removeFriend(f.id));
+    bar.appendChild(chip);
+  });
+  const addWrap = document.createElement('div');
+  addWrap.className = 'add-friend';
+  addWrap.innerHTML = `<input type="text" placeholder="Add friend…" id="newFriendInput">
+    <button id="addFriendBtn">+</button>`;
+  bar.appendChild(addWrap);
+  const input = addWrap.querySelector('#newFriendInput');
+  const doAdd = ()=>{
+    const name = input.value.trim();
+    if(!name) return;
+    addFriend(name);
+    input.value='';
+  };
+  addWrap.querySelector('#addFriendBtn').addEventListener('click', doAdd);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doAdd(); }});
+}
+
+function renderExpenses(){
+  const list = document.getElementById('expenseList');
+  list.innerHTML = '';
+  if(state.expenses.length===0){
+    list.innerHTML = `<div class="empty">
+      <div class="big">No expenses yet</div>
+      ${state.friends.length===0 ? 'Add your friends above, then log your first expense.' : 'Log the first thing someone paid for.'}
+    </div>`;
+    return;
+  }
+  const sorted = [...state.expenses].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  sorted.forEach(exp=>{
+    const payer = state.friends.find(f=>f.id===exp.paidBy);
+    const ticket = document.createElement('div');
+    ticket.className = 'ticket';
+    const splitNames = exp.splitAmong.map(id=>state.friends.find(f=>f.id===id)).filter(Boolean);
+    ticket.innerHTML = `
+      <div class="ticket-main">
+        <div class="ticket-row1">
+          <div class="ticket-desc">${escapeHtml(exp.description)}</div>
+          <div class="ticket-amount">₹${fmt(exp.amount)}</div>
+        </div>
+        <div class="ticket-meta">
+          <span>Paid by <b>${payer?escapeHtml(payer.name):'—'}</b></span>
+          <span>${exp.date || ''}</span>
+          <span>Split ${splitNames.length} way${splitNames.length===1?'':'s'} · <b>₹${fmt(exp.amount/(splitNames.length||1))}</b> each</span>
+        </div>
+        <div class="split-avatars">
+          ${splitNames.map(f=>`<span class="mini-avatar" style="background:${colorFor(f.id)}" title="${escapeHtml(f.name)}">${initials(f.name)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="ticket-stub">
+        <button class="stub-btn" title="Edit" data-edit="${exp.id}">✎</button>
+        <button class="stub-btn danger" title="Delete" data-del="${exp.id}">🗑</button>
+      </div>
+    `;
+    ticket.querySelector('[data-edit]').addEventListener('click', ()=>openExpenseModal(exp.id));
+    ticket.querySelector('[data-del]').addEventListener('click', ()=>deleteExpense(exp.id));
+    list.appendChild(ticket);
+  });
+}
+
+function computeBalances(){
+  const net = {};
+  state.friends.forEach(f=> net[f.id] = 0);
+  state.expenses.forEach(exp=>{
+    const n = exp.splitAmong.length || 1;
+    const share = exp.amount / n;
+    if(net[exp.paidBy] !== undefined) net[exp.paidBy] += exp.amount;
+    exp.splitAmong.forEach(id=>{ if(net[id] !== undefined) net[id] -= share; });
+  });
+  return net;
+}
+
+function simplifySettlements(net){
+  const creditors = [], debtors = [];
+  Object.entries(net).forEach(([id,amt])=>{
+    if(amt > 0.005) creditors.push({id, amt});
+    else if(amt < -0.005) debtors.push({id, amt:-amt});
+  });
+  creditors.sort((a,b)=>b.amt-a.amt);
+  debtors.sort((a,b)=>b.amt-a.amt);
+  const txns = [];
+  let i=0,j=0;
+  while(i<debtors.length && j<creditors.length){
+    const pay = Math.min(debtors[i].amt, creditors[j].amt);
+    txns.push({from:debtors[i].id, to:creditors[j].id, amt:pay});
+    debtors[i].amt -= pay; creditors[j].amt -= pay;
+    if(debtors[i].amt < 0.005) i++;
+    if(creditors[j].amt < 0.005) j++;
+  }
+  return txns;
+}
+
+function renderBalances(){
+  const view = document.getElementById('balancesView');
+  if(state.friends.length===0){
+    view.innerHTML = `<div class="empty"><div class="big">Add friends first</div>Balances will show up once you've added people and logged expenses.</div>`;
+    return;
+  }
+  const net = computeBalances();
+  let html = `<div class="balance-card">`;
+  state.friends.forEach(f=>{
+    const amt = net[f.id]||0;
+    const cls = amt>0.005?'positive':(amt<-0.005?'negative':'');
+    const label = amt>0.005? `is owed ₹${fmt(amt)}` : (amt<-0.005? `owes ₹${fmt(-amt)}` : 'settled up');
+    html += `<div class="balance-row">
+      <div class="balance-who"><span class="avatar" style="background:${colorFor(f.id)};width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;">${initials(f.name)}</span> ${escapeHtml(f.name)}</div>
+      <div class="balance-amt ${cls}">${label}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  const txns = simplifySettlements(net);
+  html += `<div class="settle-title">Suggested settle-up</div>`;
+  if(txns.length===0){
+    html += `<div class="empty">Everyone's square — no payments needed.</div>`;
+  } else {
+    txns.forEach(t=>{
+      const from = state.friends.find(f=>f.id===t.from);
+      const to = state.friends.find(f=>f.id===t.to);
+      html += `<div class="settle-row">
+        <span>${escapeHtml(from?.name||'?')}</span>
+        <span class="settle-arrow">→</span>
+        <span>${escapeHtml(to?.name||'?')}</span>
+        <span class="settle-amt">₹${fmt(t.amt)}</span>
+      </div>`;
+    });
+  }
+  view.innerHTML = html;
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+
+/* ---------- Mutations ---------- */
+async function addFriend(name){
+  state.friends.push({id: uid(), name});
+  render();
+  await saveState();
+}
+async function removeFriend(id){
+  if(!confirm('Remove this person? Existing expenses involving them will keep their name but they will no longer appear in new splits.')) return;
+  state.friends = state.friends.filter(f=>f.id!==id);
+  render();
+  await saveState();
+}
+async function deleteExpense(id){
+  if(!confirm('Delete this expense?')) return;
+  state.expenses = state.expenses.filter(e=>e.id!==id);
+  render();
+  await saveState();
+  showToast('Expense deleted');
+}
+
+/* ---------- Modal ---------- */
+function openExpenseModal(expenseId){
+  editingExpenseId = expenseId || null;
+  const existing = expenseId ? state.expenses.find(e=>e.id===expenseId) : null;
+  if(state.friends.length===0){
+    showToast('Add at least one friend first');
+    return;
+  }
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${existing? 'Edit expense' : 'Add an expense'}</h3>
+      <div class="field">
+        <label>What was it for</label>
+        <input type="text" id="f_desc" placeholder="Dinner, taxi, hotel…" value="${existing?escapeHtml(existing.description):''}">
+      </div>
+      <div class="field">
+        <label>Amount</label>
+        <input type="number" id="f_amt" step="0.01" min="0" placeholder="0.00" value="${existing?existing.amount:''}">
+      </div>
+      <div class="field">
+        <label>Paid by</label>
+        <select id="f_paidby">
+          ${state.friends.map(f=>`<option value="${f.id}" ${existing&&existing.paidBy===f.id?'selected':''}>${escapeHtml(f.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="f_date" value="${existing?existing.date:new Date().toISOString().slice(0,10)}">
+      </div>
+      <div class="field">
+        <label>Split between</label>
+        <div class="split-grid" id="f_split">
+          ${state.friends.map(f=>{
+            const on = existing ? existing.splitAmong.includes(f.id) : true;
+            return `<div class="split-pill ${on?'on':''}" data-id="${f.id}">
+              <span class="avatar" style="background:${colorFor(f.id)};width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9px;">${initials(f.name)}</span>
+              ${escapeHtml(f.name)}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="f_cancel">Cancel</button>
+        <button class="btn btn-primary" id="f_save">${existing?'Save changes':'Add expense'}</button>
+      </div>
+      ${existing?'<div style="text-align:center;"><button class="btn-danger-text" id="f_delete">Delete this expense</button></div>':''}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelectorAll('.split-pill').forEach(pill=>{
+    pill.addEventListener('click', ()=> pill.classList.toggle('on'));
+  });
+  overlay.querySelector('#f_cancel').addEventListener('click', ()=> overlay.remove());
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  if(existing){
+    overlay.querySelector('#f_delete').addEventListener('click', async ()=>{
+      overlay.remove();
+      await deleteExpense(existing.id);
+    });
+  }
+  overlay.querySelector('#f_save').addEventListener('click', async ()=>{
+    const desc = overlay.querySelector('#f_desc').value.trim();
+    const amt = parseFloat(overlay.querySelector('#f_amt').value);
+    const paidBy = overlay.querySelector('#f_paidby').value;
+    const date = overlay.querySelector('#f_date').value;
+    const splitAmong = [...overlay.querySelectorAll('.split-pill.on')].map(p=>p.dataset.id);
+    if(!desc){ showToast('Give it a short description'); return; }
+    if(!amt || amt<=0){ showToast('Enter a valid amount'); return; }
+    if(splitAmong.length===0){ showToast('Pick at least one person to split with'); return; }
+    if(existing){
+      Object.assign(existing, {description:desc, amount:amt, paidBy, date, splitAmong});
+    } else {
+      state.expenses.push({id:uid(), description:desc, amount:amt, paidBy, date, splitAmong});
+    }
+    overlay.remove();
+    render();
+    await saveState();
+    showToast(existing?'Expense updated':'Expense added');
+  });
+}
+
+/* ---------- Tabs & Title editing ---------- */
+document.getElementById('tabExpenses').addEventListener('click', ()=>switchTab('expenses'));
+document.getElementById('tabBalances').addEventListener('click', ()=>switchTab('balances'));
+function switchTab(tab){
+  activeTab = tab;
+  document.getElementById('tabExpenses').classList.toggle('active', tab==='expenses');
+  document.getElementById('tabBalances').classList.toggle('active', tab==='balances');
+  document.getElementById('expensesView').style.display = tab==='expenses'?'block':'none';
+  document.getElementById('balancesView').style.display = tab==='balances'?'block':'none';
+  if(tab==='balances') renderBalances();
+}
+
+document.getElementById('openAddExpense').addEventListener('click', ()=>openExpenseModal(null));
+
+const titleEl = document.getElementById('tripTitle');
+titleEl.addEventListener('blur', async ()=>{
+  const val = titleEl.textContent.trim() || 'Our Trip';
+  if(val !== state.tripName){
+    state.tripName = val;
+    await saveState();
+  }
+});
+titleEl.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); titleEl.blur(); }
+});
+
+init();
+</script>
+</body>
+</html>
